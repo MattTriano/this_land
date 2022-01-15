@@ -4,19 +4,13 @@ from typing import Dict, List, Union, Optional
 import pandas as pd
 import geopandas as gpd
 
-from utils import (
-    get_project_root_dir,
-    extract_csv_from_url,
-    extract_file_from_url
-)
+from utils import get_project_root_dir, extract_csv_from_url, extract_file_from_url
 
 
 def extract_north_american_rail_nodes(
     project_root_dir: os.path = get_project_root_dir(), return_df: bool = True
 ) -> gpd.GeoDataFrame:
-    data_documentation_url = (
-        "https://data-usdot.opendata.arcgis.com/datasets/usdot::north-american-rail-nodes/about"
-    )
+    data_documentation_url = "https://data-usdot.opendata.arcgis.com/datasets/usdot::north-american-rail-nodes/about"
     file_name = "north_american_rail_nodes.geojson"
     url = "https://opendata.arcgis.com/api/v3/datasets/7958468db586471d94f97e99b916175a_0/downloads/data?format=geojson&spatialRefId=4326"
     file_path = os.path.join(project_root_dir, "data_raw", file_name)
@@ -29,9 +23,7 @@ def extract_north_american_rail_nodes(
 def extract_north_american_rail_lines(
     project_root_dir: os.path = get_project_root_dir(), return_df: bool = True
 ) -> gpd.GeoDataFrame:
-    data_documentation_url = (
-        "https://data-usdot.opendata.arcgis.com/datasets/usdot::north-american-rail-lines/about"
-    )
+    data_documentation_url = "https://data-usdot.opendata.arcgis.com/datasets/usdot::north-american-rail-lines/about"
     file_name = "north_american_rail_lines.geojson"
     url = "https://opendata.arcgis.com/api/v3/datasets/d83e85154a304da995837889cc4012e3_0/downloads/data?format=geojson&spatialRefId=4326"
     file_path = os.path.join(project_root_dir, "data_raw", file_name)
@@ -70,3 +62,18 @@ def extract_amtrak_stations(
         file_path=file_path, url=url, data_format="geojson", return_df=return_df
     )
 
+
+def extract_tiger_rail_lines_2021(
+    project_root_dir: os.path = get_project_root_dir(), return_df: bool = True
+) -> gpd.GeoDataFrame:
+    data_documentation_url = (
+        "https://www.census.gov/programs-surveys/geography/technical-documentation/"
+        + "complete-technical-documentation/tiger-geo-line.2021.html"
+    )
+    file_name = "census_tiger_rail_lines_2021.zip"
+    url = "https://www2.census.gov/geo/tiger/TIGER2021/RAILS/tl_2021_us_rails.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", file_name)
+
+    return extract_file_from_url(
+        file_path=file_path, url=url, data_format="shp", return_df=return_df
+    )
