@@ -73,3 +73,19 @@ def extract_tiger_state_lines_2021(
     return extract_file_from_url(
         file_path=file_path, url=url, data_format="shp", return_df=return_df
     )
+
+
+def extract_tiger_rail_lines_2021(
+    project_root_dir: os.path = get_project_root_dir(), return_df: bool = True
+) -> gpd.GeoDataFrame:
+    data_documentation_url = (
+        "https://www.census.gov/programs-surveys/geography/technical-documentation/"
+        + "complete-technical-documentation/tiger-geo-line.2021.html"
+    )
+    file_name = "census_tiger_rail_lines_2021.zip"
+    url = "https://www2.census.gov/geo/tiger/TIGER2021/RAILS/tl_2021_us_rails.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", file_name)
+
+    return extract_file_from_url(
+        file_path=file_path, url=url, data_format="shp", return_df=return_df
+    )
