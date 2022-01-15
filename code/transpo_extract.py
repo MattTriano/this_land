@@ -1,6 +1,9 @@
 import os
 from typing import Dict, List, Union, Optional
 
+import pandas as pd
+import geopandas as gpd
+
 from utils import (
     get_project_root_dir,
     extract_csv_from_url,
@@ -10,7 +13,7 @@ from utils import (
 
 def extract_north_american_rail_nodes(
     project_root_dir: os.path = get_project_root_dir(), return_df: bool = True
-) -> pd.DataFrame:
+) -> gpd.GeoDataFrame:
     data_documentation_url = (
         "https://data-usdot.opendata.arcgis.com/datasets/usdot::north-american-rail-nodes/about"
     )
@@ -25,7 +28,7 @@ def extract_north_american_rail_nodes(
 
 def extract_north_american_rail_lines(
     project_root_dir: os.path = get_project_root_dir(), return_df: bool = True
-) -> pd.DataFrame:
+) -> gpd.GeoDataFrame:
     data_documentation_url = (
         "https://data-usdot.opendata.arcgis.com/datasets/usdot::north-american-rail-lines/about"
     )
@@ -40,7 +43,7 @@ def extract_north_american_rail_lines(
 
 def extract_amtrak_routes(
     project_root_dir: os.path = get_project_root_dir(), return_df: bool = True
-) -> pd.DataFrame:
+) -> gpd.GeoDataFrame:
     data_documentation_url = (
         "https://data-usdot.opendata.arcgis.com/datasets/usdot::amtrak-routes/about"
     )
@@ -55,7 +58,7 @@ def extract_amtrak_routes(
 
 def extract_amtrak_stations(
     project_root_dir: os.path = get_project_root_dir(), return_df: bool = True
-) -> pd.DataFrame:
+) -> gpd.GeoDataFrame:
     data_documentation_url = (
         "https://data-usdot.opendata.arcgis.com/datasets/usdot::amtrak-stations-1/about"
     )
