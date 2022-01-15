@@ -5,6 +5,9 @@ from urllib.request import urlretrieve
 import pandas as pd
 import geopandas as gpd
 
+from constants import STATE_ABRV_TO_FIPS_CODE_CROSSWALK
+
+
 def get_project_root_dir() -> os.path:
     return os.path.dirname(os.path.dirname(os.path.abspath("__file__")))
 
@@ -13,8 +16,9 @@ def setup_project_structure(project_root_dir: os.path = get_project_root_dir()) 
     os.makedirs(os.path.join(project_root_dir, "data_raw"), exist_ok=True)
     os.makedirs(os.path.join(project_root_dir, "data_clean"), exist_ok=True)
     os.makedirs(os.path.join(project_root_dir, "code"), exist_ok=True)
+    os.makedirs(os.path.join(project_root_dir, "output"), exist_ok=True)
 
-    
+
 def extract_csv_from_url(
     file_path: os.path, url: str, force_repull: bool = False, return_df: bool = True
 ) -> pd.DataFrame:
@@ -22,10 +26,14 @@ def extract_csv_from_url(
         urlretrieve(url, file_path)
     if return_df:
         return pd.read_csv(file_path)
-    
+
 
 def extract_file_from_url(
-    file_path: os.path, url: str, data_format: str, force_repull: bool = False, return_df: bool = True
+    file_path: os.path,
+    url: str,
+    data_format: str,
+    force_repull: bool = False,
+    return_df: bool = True,
 ) -> pd.DataFrame:
     if not os.path.isfile(file_path) or force_repull:
         urlretrieve(url, file_path)
@@ -34,3 +42,9 @@ def extract_file_from_url(
             return pd.read_csv(file_path)
         elif data_format in ["shp", "geojson"]:
             return gpd.read_file(file_path)
+
+
+def crosswalk_state_abrv_to_state_fips_code(state_abrv: str) -> str:
+    state_abrv = state_abrv.upper()
+    assert state_abrv in STATE_ABRV_TO_FIPS_CODE_CROSSWALK.keys()
+    return STATE_ABRV_TO_FIPS_CODE_CROSSWALK[state_abrv]

@@ -4,7 +4,12 @@ from typing import Dict, List, Union, Optional
 import pandas as pd
 import geopandas as gpd
 
-from utils import get_project_root_dir, extract_csv_from_url, extract_file_from_url
+from utils import (
+    get_project_root_dir,
+    extract_csv_from_url,
+    extract_file_from_url,
+    crosswalk_state_abrv_to_state_fips_code,
+)
 
 
 def extract_tiger_state_lines_2019(
@@ -73,11 +78,12 @@ def extract_tiger_state_lines_2021(
 
 def extract_census_tracts_for_one_state_and_year(
     state_abrv: str,
-    state_fips: str,
     year: str,
     project_root_dir: os.path = get_project_root_dir(),
     return_df: bool = True,
 ) -> gpd.GeoDataFrame:
+    state_abrv = state_abrv.upper()
+    state_fips = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
     file_name = f"census_tracts_{state_abrv}_{year}.zip"
     url = f"https://www2.census.gov/geo/tiger/TIGER{year}/TRACT/tl_{year}_{state_fips}_tract.zip"
     file_path = os.path.join(project_root_dir, "data_raw", file_name)
@@ -89,17 +95,15 @@ def extract_census_tracts_for_one_state_and_year(
 
 def extract_census_tracts_from_one_year_for_list_of_states(
     year: str,
-    state_fips_list: List[str],
     state_abrv_list: List[str],
     project_root_dir: os.path = get_project_root_dir(),
     return_df: bool = True,
 ) -> Optional[gpd.GeoDataFrame]:
     tract_gdf_list = []
-    for fip, abrv in zip(state_fips_list, state_abrv_list):
+    for state_abrv in state_abrv_list:
         tract_gdf_list.append(
             extract_census_tracts_for_one_state_and_year(
-                state_abrv=abrv,
-                state_fips=fip,
+                state_abrv=state_abrv,
                 year=year,
                 project_root_dir=project_root_dir,
                 return_df=True,
@@ -109,34 +113,3 @@ def extract_census_tracts_from_one_year_for_list_of_states(
         tract_gdf = pd.concat(tract_gdf_list)
         tract_gdf = tract_gdf.reset_index(drop=True)
         return tract_gdf
-
-
-def extract_state_abrv_to_fips_code_crosswalk(
-    state_lines_gdf: gpd.GeoDataFrame,
-    project_root_dir: os.path = get_project_root_dir(),
-) -> None:
-    file_path = os.path.join(
-        project_root_dir, "data_clean", "state_abrv_to_fips_code_crosswalk.csv"
-    )
-    if not os.path.isfile(file_path):
-        state_fips_crosswalk_df = state_lines_gdf[["STATEFP", "STUSPS"]].copy()
-        state_fips_crosswalk_df = state_fips_crosswalk_df.sort_values(by="STATEFP")
-        state_fips_crosswalk_df = state_fips_crosswalk_df.reset_index(drop=True)
-        state_fips_crosswalk_df = state_fips_crosswalk_df.rename(
-            columns={"STATEFP": "STATE_FIPS", "STUSPS": "STATE_ABRV"}
-        )
-        state_fips_crosswalk_df.to_csv(file_path, index=False)
-
-
-def load_state_abrv_to_fips_code_crosswalk(
-    project_root_dir: os.path = get_project_root_dir(),
-) -> pd.DataFrame:
-    file_path = os.path.join(
-        project_root_dir, "data_clean", "state_abrv_to_fips_code_crosswalk.csv"
-    )
-    if not os.path.isfile(file_path):
-        extract_state_abrv_to_fips_code_crosswalk(
-            state_lines_gdf=extract_tiger_state_lines_2021(),
-            project_root_dir=project_root_dir,
-        )
-    return pd.read_csv(file_path, dtype="string")
