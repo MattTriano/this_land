@@ -109,3 +109,34 @@ def extract_census_tracts_from_one_year_for_list_of_states(
         tract_gdf = pd.concat(tract_gdf_list)
         tract_gdf = tract_gdf.reset_index(drop=True)
         return tract_gdf
+
+
+def extract_state_abrv_to_fips_code_crosswalk(
+    state_lines_gdf: gpd.GeoDataFrame,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> None:
+    file_path = os.path.join(
+        project_root_dir, "data_clean", "state_abrv_to_fips_code_crosswalk.csv"
+    )
+    if not os.path.isfile(file_path):
+        state_fips_crosswalk_df = state_lines_gdf[["STATEFP", "STUSPS"]].copy()
+        state_fips_crosswalk_df = state_fips_crosswalk_df.sort_values(by="STATEFP")
+        state_fips_crosswalk_df = state_fips_crosswalk_df.reset_index(drop=True)
+        state_fips_crosswalk_df = state_fips_crosswalk_df.rename(
+            columns={"STATEFP": "STATE_FIPS", "STUSPS": "STATE_ABRV"}
+        )
+        state_fips_crosswalk_df.to_csv(file_path, index=False)
+
+
+def load_state_abrv_to_fips_code_crosswalk(
+    project_root_dir: os.path = get_project_root_dir(),
+) -> pd.DataFrame:
+    file_path = os.path.join(
+        project_root_dir, "data_clean", "state_abrv_to_fips_code_crosswalk.csv"
+    )
+    if not os.path.isfile(file_path):
+        extract_state_abrv_to_fips_code_crosswalk(
+            state_lines_gdf=extract_tiger_state_lines_2021(),
+            project_root_dir=project_root_dir,
+        )
+    return pd.read_csv(file_path, dtype="string")
