@@ -1,4 +1,5 @@
 import os
+import re
 from typing import Dict, List, Union, Optional
 
 import pandas as pd
@@ -8,8 +9,8 @@ from utils import (
     get_project_root_dir,
     extract_csv_from_url,
     extract_file_from_url,
-    crosswalk_state_abrv_to_state_fips_code,
 )
+from constants import STATE_ABRV_TO_FIPS_CODE_CROSSWALK
 
 
 def extract_tiger_state_lines_from_one_year(
@@ -87,3 +88,50 @@ def extract_census_tracts_from_one_year_for_list_of_states(
         tract_gdf = pd.concat(tract_gdf_list)
         tract_gdf = tract_gdf.reset_index(drop=True)
         return tract_gdf
+
+
+def crosswalk_state_abrv_to_state_fips_code(state_abrv: str) -> str:
+    state_abrv = state_abrv.upper()
+    assert state_abrv in STATE_ABRV_TO_FIPS_CODE_CROSSWALK.keys()
+    return STATE_ABRV_TO_FIPS_CODE_CROSSWALK[state_abrv]
+
+
+def extract_county_fips_to_county_name_crosswalk(
+    project_root_dir: os.path = get_project_root_dir(), year: str = "2021"
+) -> None:
+    file_path = os.path.join(
+        project_root_dir, "data_clean", "crosswalks", "county_fips_code_crosswalk.csv"
+    )
+    if not os.path.isfile(file_path):
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        counties_gdf = census_extract.extract_tiger_county_lines_from_one_year(
+            year=year, project_root_dir=project_root_dir, return_df=True
+        )
+        county_fips_code_crosswalk = counties_gdf[
+            ["STATEFP", "COUNTYFP", "NAME"]
+        ].copy()
+        county_fips_code_crosswalk.to_csv(file_path, index=False)
+        county_fips_code_crosswalk.to_parquet(
+            file_path.replace(".csv", ".parquet.gzip"), compression="gzip"
+        )
+
+
+def load_county_fips_to_county_name_crosswalk(
+    project_root_dir: os.path = get_project_root_dir(),
+    crosswalk_file_extension: str = "parquet.gzip",
+) -> pd.DataFrame:
+    project_root_dir = get_project_root_dir()
+    crosswalk_file_extension = re.sub(r"^\.", "", crosswalk_file_extension).lower()
+    assert crosswalk_file_extension.lower() in ["parquet.gzip", "csv"]
+    file_path = os.path.join(
+        project_root_dir,
+        "data_clean",
+        "crosswalks",
+        f"county_fips_code_crosswalk.{crosswalk_file_extension}",
+    )
+    if not os.path.isfile(file_path):
+        extract_county_fips_to_county_name_crosswalk(project_root_dir=project_root_dir)
+    if crosswalk_file_extension == "parquet.gzip":
+        return pd.read_parquet(file_path)
+    else:
+        return pd.read_csv(file_path, dtype="string")

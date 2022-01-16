@@ -5,8 +5,6 @@ from urllib.request import urlretrieve
 import pandas as pd
 import geopandas as gpd
 
-from constants import STATE_ABRV_TO_FIPS_CODE_CROSSWALK
-
 
 def get_project_root_dir() -> os.path:
     return os.path.dirname(os.path.dirname(os.path.abspath("__file__")))
@@ -42,9 +40,3 @@ def extract_file_from_url(
             return pd.read_csv(file_path)
         elif data_format in ["shp", "geojson"]:
             return gpd.read_file(file_path)
-
-
-def crosswalk_state_abrv_to_state_fips_code(state_abrv: str) -> str:
-    state_abrv = state_abrv.upper()
-    assert state_abrv in STATE_ABRV_TO_FIPS_CODE_CROSSWALK.keys()
-    return STATE_ABRV_TO_FIPS_CODE_CROSSWALK[state_abrv]
