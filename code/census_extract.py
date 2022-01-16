@@ -104,12 +104,16 @@ def extract_county_fips_to_county_name_crosswalk(
     )
     if not os.path.isfile(file_path):
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        counties_gdf = census_extract.extract_tiger_county_lines_from_one_year(
+        counties_gdf = extract_tiger_county_lines_from_one_year(
             year=year, project_root_dir=project_root_dir, return_df=True
         )
         county_fips_code_crosswalk = counties_gdf[
             ["STATEFP", "COUNTYFP", "NAME"]
         ].copy()
+        county_fips_code_crosswalk = county_fips_code_crosswalk.sort_values(
+            by=["STATEFP", "COUNTYFP"]
+        )
+        county_fips_code_crosswalk = county_fips_code_crosswalk.reset_index(drop=True)
         county_fips_code_crosswalk.to_csv(file_path, index=False)
         county_fips_code_crosswalk.to_parquet(
             file_path.replace(".csv", ".parquet.gzip"), compression="gzip"
@@ -135,3 +139,23 @@ def load_county_fips_to_county_name_crosswalk(
         return pd.read_parquet(file_path)
     else:
         return pd.read_csv(file_path, dtype="string")
+
+
+def crosswalk_county_name_to_county_fips_code(
+    state_abrv: str,
+    county_name: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> str:
+    state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
+    county_fips_to_county_name_crosswalk = load_county_fips_to_county_name_crosswalk(
+        project_root_dir=project_root_dir
+    )
+    county_fips_code = county_fips_to_county_name_crosswalk.loc[
+        (county_fips_to_county_name_crosswalk["STATEFP"] == state_fips_code)
+        & (
+            county_fips_to_county_name_crosswalk["NAME"].str.lower()
+            == county_name.lower()
+        ),
+        "COUNTYFP",
+    ].values[0]
+    return county_fips_code
