@@ -20,6 +20,7 @@ def setup_project_structure(project_root_dir: os.path = get_project_root_dir()) 
 def extract_csv_from_url(
     file_path: os.path, url: str, force_repull: bool = False, return_df: bool = True
 ) -> pd.DataFrame:
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     if not os.path.isfile(file_path) or force_repull:
         urlretrieve(url, file_path)
     if return_df:
@@ -33,6 +34,7 @@ def extract_file_from_url(
     force_repull: bool = False,
     return_df: bool = True,
 ) -> pd.DataFrame:
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     if not os.path.isfile(file_path) or force_repull:
         urlretrieve(url, file_path)
     if return_df:
