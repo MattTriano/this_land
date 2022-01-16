@@ -124,7 +124,6 @@ def load_county_fips_to_county_name_crosswalk(
     project_root_dir: os.path = get_project_root_dir(),
     crosswalk_file_extension: str = "parquet.gzip",
 ) -> pd.DataFrame:
-    project_root_dir = get_project_root_dir()
     crosswalk_file_extension = re.sub(r"^\.", "", crosswalk_file_extension).lower()
     assert crosswalk_file_extension.lower() in ["parquet.gzip", "csv"]
     file_path = os.path.join(
