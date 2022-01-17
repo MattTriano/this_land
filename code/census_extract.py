@@ -158,3 +158,23 @@ def crosswalk_county_name_to_county_fips_code(
         "COUNTYFP",
     ].values[0]
     return county_fips_code
+
+
+def load_tiger_county_boundary_from_one_year_and_county(
+    state_abrv: str,
+    county_name: str,
+    year: str,
+    counties_gdf: Optional[gpd.GeoDataFrame] = None,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> gpd.GeoDataFrame:
+    state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
+    if counties_gdf is None:
+        counties_gdf = extract_tiger_county_lines_from_one_year(
+            year=year, project_root_dir=project_root_dir
+        )
+    county_gdf = counties_gdf.loc[
+        (counties_gdf["STATEFP"] == state_fips_code)
+        & (counties_gdf["NAME"].str.lower() == county_name.lower())
+    ].copy()
+    county_gdf = county_gdf.reset_index(drop=True)
+    return county_gdf
