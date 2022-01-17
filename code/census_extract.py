@@ -2,8 +2,9 @@ import os
 import re
 from typing import Dict, List, Union, Optional
 
-import pandas as pd
 import geopandas as gpd
+import pandas as pd
+import matplotlib.pyplot as plt
 
 from utils import (
     get_project_root_dir,
@@ -178,3 +179,152 @@ def load_tiger_county_boundary_from_one_year_and_county(
     ].copy()
     county_gdf = county_gdf.reset_index(drop=True)
     return county_gdf
+
+
+def extract_tiger_rail_lines_2021(
+    project_root_dir: os.path = get_project_root_dir(), return_df: bool = True
+) -> gpd.GeoDataFrame:
+    data_documentation_url = (
+        "https://www.census.gov/programs-surveys/geography/technical-documentation/"
+        + "complete-technical-documentation/tiger-geo-line.2021.html"
+    )
+    file_name = "census_tiger_rail_lines_2021.zip"
+    url = "https://www2.census.gov/geo/tiger/TIGER2021/RAILS/tl_2021_us_rails.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", file_name)
+
+    return extract_file_from_url(
+        file_path=file_path, url=url, data_format="shp", return_df=return_df
+    )
+
+
+def extract_tiger_county_roads_from_one_year(
+    state_abrv: str,
+    county_name: str,
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> None:
+    state_abrv = state_abrv.upper()
+    state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
+    county_fips_code = crosswalk_county_name_to_county_fips_code(
+        state_abrv=state_abrv, county_name=county_name
+    )
+    county_geoid = state_fips_code + county_fips_code
+
+    url = f"https://www2.census.gov/geo/tiger/TIGER{year}/ROADS/tl_{year}_{county_geoid}_roads.zip"
+    file_name = f"roads_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "roads", file_name)
+
+    extract_file_from_url(
+        file_path=file_path, url=url, data_format="shp", return_df=False
+    )
+
+
+def load_tiger_county_roads_from_one_year(
+    state_abrv: str,
+    county_name: str,
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> gpd.GeoDataFrame:
+    file_name = f"roads_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "roads", file_name)
+    if not os.path.isfile(file_path):
+        extract_tiger_county_roads_from_one_year(
+            state_abrv=state_abrv,
+            county_name=county_name,
+            year=year,
+            project_root_dir=project_root_dir,
+        )
+    return gpd.read_file(file_path)
+
+
+def plot_roads_by_feature_class_in_county_in_census_year(
+    state_abrv: str,
+    county_name: str,
+    year: str,
+    county_roads_gdf: Optional[gpd.GeoDataFrame] = None,
+    counties_gdf: Optional[gpd.GeoDataFrame] = None,
+    project_root_dir: os.path = get_project_root_dir(),
+    fig_width: int = 20,
+    pad_pct: float = 0.03,
+    top_pad_mult: float = 2.5,
+) -> None:
+    if county_roads_gdf is None:
+        county_roads_gdf = load_tiger_county_roads_from_one_year(
+            state_abrv=state_abrv,
+            county_name=county_name,
+            year=year,
+        )
+    county_gdf = load_tiger_county_boundary_from_one_year_and_county(
+        state_abrv=state_abrv,
+        county_name=county_name,
+        year=year,
+        counties_gdf=counties_gdf,
+    )
+    fig, ax = plt.subplots(figsize=(fig_width, fig_width))
+    ax = county_roads_gdf.loc[(county_roads_gdf["MTFCC"] == "S1740")].plot(
+        color="#8c510a",
+        label="Private Road",
+        linewidth=fig_width * 0.035,
+        linestyle="--",
+        alpha=0.8,
+        ax=ax,
+    )
+    ax = county_roads_gdf.loc[(county_roads_gdf["MTFCC"] == "S1400")].plot(
+        color="#b7b7b9",
+        label="Public Local Road",
+        linewidth=fig_width * 0.05,
+        alpha=0.8,
+        ax=ax,
+    )
+    ax = county_roads_gdf.loc[(county_roads_gdf["MTFCC"] == "S1200")].plot(
+        color="#ec1c24",
+        label="Secondary Road",
+        linewidth=fig_width * 0.075,
+        alpha=0.8,
+        ax=ax,
+    )
+    ax = county_roads_gdf.loc[
+        (county_roads_gdf["MTFCC"].isin(["S1100", "S1630"]))
+    ].plot(
+        color="#59abdd",
+        label="Primary Road",
+        linewidth=fig_width * 0.1,
+        alpha=0.8,
+        ax=ax,
+    )
+    ax = county_gdf.plot(
+        color="none", linewidth=fig_width * 0.25, edgecolor="black", ax=ax
+    )
+
+    county_bounds = county_gdf["geometry"].bounds
+    county_max_lat = county_bounds["maxy"].max()
+    county_min_lat = county_bounds["miny"].min()
+    county_lat_span = county_max_lat - county_min_lat
+    county_lat_pad = county_lat_span * pad_pct
+    _ = ax.set_ylim(
+        [
+            county_min_lat - county_lat_pad,
+            county_max_lat + (county_lat_pad * top_pad_mult),
+        ]
+    )
+
+    _ = ax.set_title(
+        f"Roads in {county_name} County, {state_abrv} (per {year} census data)",
+        fontsize=fig_width * 1.5,
+    )
+    _ = ax.tick_params(labelsize=fig_width * 0.5)
+
+    handles, labels = ax.get_legend_handles_labels()
+    handles.reverse()
+    labels.reverse()
+    lgnd = ax.legend(
+        handles,
+        labels,
+        fontsize=fig_width * 0.9,
+        loc="upper center",
+        ncol=4,
+        frameon=False,
+        markerscale=0.1,
+    )
+    for legend_handle in lgnd.legendHandles:
+        legend_handle.set_linewidth(fig_width * 0.25)
