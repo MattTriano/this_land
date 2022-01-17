@@ -245,6 +245,7 @@ def plot_roads_by_feature_class_in_county_in_census_year(
     counties_gdf: Optional[gpd.GeoDataFrame] = None,
     project_root_dir: os.path = get_project_root_dir(),
     fig_width: int = 20,
+    output_image: bool = False,
     pad_pct: float = 0.03,
     top_pad_mult: float = 2.5,
 ) -> None:
@@ -264,7 +265,7 @@ def plot_roads_by_feature_class_in_county_in_census_year(
     ax = county_roads_gdf.loc[(county_roads_gdf["MTFCC"] == "S1740")].plot(
         color="#8c510a",
         label="Private Road",
-        linewidth=fig_width * 0.035,
+        linewidth=fig_width * 0.015,
         linestyle="--",
         alpha=0.8,
         ax=ax,
@@ -272,14 +273,14 @@ def plot_roads_by_feature_class_in_county_in_census_year(
     ax = county_roads_gdf.loc[(county_roads_gdf["MTFCC"] == "S1400")].plot(
         color="#b7b7b9",
         label="Public Local Road",
-        linewidth=fig_width * 0.05,
+        linewidth=fig_width * 0.025,
         alpha=0.8,
         ax=ax,
     )
     ax = county_roads_gdf.loc[(county_roads_gdf["MTFCC"] == "S1200")].plot(
         color="#ec1c24",
         label="Secondary Road",
-        linewidth=fig_width * 0.075,
+        linewidth=fig_width * 0.05,
         alpha=0.8,
         ax=ax,
     )
@@ -288,7 +289,7 @@ def plot_roads_by_feature_class_in_county_in_census_year(
     ].plot(
         color="#59abdd",
         label="Primary Road",
-        linewidth=fig_width * 0.1,
+        linewidth=fig_width * 0.075,
         alpha=0.8,
         ax=ax,
     )
@@ -328,3 +329,17 @@ def plot_roads_by_feature_class_in_county_in_census_year(
     )
     for legend_handle in lgnd.legendHandles:
         legend_handle.set_linewidth(fig_width * 0.25)
+    if output_image:
+        cn = county_name.lower().replace(" ", "_")
+        sn = state_abrv.upper()
+        output_image_file_path = os.path.join(
+            project_root_dir,
+            "output",
+            f"map_of_roads_in_{cn}_{sn}_in_{year}_by_road_feature_class.png",
+        )
+        plt.savefig(
+            output_image_file_path,
+            transparent=False,
+            facecolor="white",
+            bbox_inches="tight",
+        )
