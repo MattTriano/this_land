@@ -281,7 +281,7 @@ def extract_tiger_county_area_hyrography_relationships_for_year(
 
     url = f"https://www2.census.gov/geo/tiger/TIGER{year}/FACESAH/tl_{year}_{county_geoid}_facesah.zip"
     file_name = f"tiger_area_hydrography_relationships_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
-    file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
+    file_path = os.path.join(project_root_dir, "data_raw", "topology", file_name)
 
     extract_file_from_url(
         file_path=file_path, url=url, data_format="shp", return_df=False
@@ -295,9 +295,47 @@ def load_tiger_county_area_hyrography_relationships_for_year(
     project_root_dir: os.path = get_project_root_dir(),
 ) -> gpd.GeoDataFrame:
     file_name = f"tiger_area_hydrography_relationships_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
-    file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
+    file_path = os.path.join(project_root_dir, "data_raw", "topology", file_name)
     if not os.path.isfile(file_path):
         extract_tiger_county_area_hyrography_relationships_for_year(
+            state_abrv=state_abrv,
+            county_name=county_name,
+            year=year,
+            project_root_dir=project_root_dir,
+        )
+    return gpd.read_file(file_path)
+
+
+def extract_tiger_area_water_for_year_and_county(
+    state_abrv: str,
+    county_name: str,
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> None:
+    """TIGER description: Topological Faces County-based Shapefile Record Layout
+    TIGER label: 'facesah'
+    """
+    county_geoid = get_county_geoid(state_abrv=state_abrv, county_name=county_name)
+
+    url = f"https://www2.census.gov/geo/tiger/TIGER{year}/AREAWATER/tl_{year}_{county_geoid}_areawater.zip"
+    file_name = f"tiger_area_water_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
+
+    extract_file_from_url(
+        file_path=file_path, url=url, data_format="shp", return_df=False
+    )
+
+
+def load_tiger_tiger_area_water_for_year_and_county(
+    state_abrv: str,
+    county_name: str,
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> gpd.GeoDataFrame:
+    file_name = f"tiger_area_water_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
+    if not os.path.isfile(file_path):
+        extract_tiger_area_water_for_year_and_county(
             state_abrv=state_abrv,
             county_name=county_name,
             year=year,
