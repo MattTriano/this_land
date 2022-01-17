@@ -14,7 +14,7 @@ from utils import (
 from constants import STATE_ABRV_TO_FIPS_CODE_CROSSWALK
 
 
-def extract_tiger_state_lines_from_one_year(
+def extract_tiger_state_boundary_lines(
     year: str,
     project_root_dir: os.path = get_project_root_dir(),
     return_df: bool = True,
@@ -32,7 +32,7 @@ def extract_tiger_state_lines_from_one_year(
     )
 
 
-def extract_tiger_county_lines_from_one_year(
+def extract_tiger_boundary_lines_for_all_counties(
     year: str,
     project_root_dir: os.path = get_project_root_dir(),
     return_df: bool = True,
@@ -52,7 +52,7 @@ def extract_tiger_county_lines_from_one_year(
     )
 
 
-def extract_census_tracts_for_one_state_and_year(
+def extract_tiger_census_tract_boundary_lines_for_state(
     state_abrv: str,
     year: str,
     project_root_dir: os.path = get_project_root_dir(),
@@ -69,7 +69,7 @@ def extract_census_tracts_for_one_state_and_year(
     )
 
 
-def extract_census_tracts_from_one_year_for_list_of_states(
+def extract_tiger_census_tract_boundary_lines_for_a_list_of_states(
     year: str,
     state_abrv_list: List[str],
     project_root_dir: os.path = get_project_root_dir(),
@@ -78,7 +78,7 @@ def extract_census_tracts_from_one_year_for_list_of_states(
     tract_gdf_list = []
     for state_abrv in state_abrv_list:
         tract_gdf_list.append(
-            extract_census_tracts_for_one_state_and_year(
+            extract_tiger_census_tract_boundary_lines_for_state(
                 state_abrv=state_abrv,
                 year=year,
                 project_root_dir=project_root_dir,
@@ -97,6 +97,36 @@ def crosswalk_state_abrv_to_state_fips_code(state_abrv: str) -> str:
     return STATE_ABRV_TO_FIPS_CODE_CROSSWALK[state_abrv]
 
 
+def crosswalk_county_name_to_county_fips_code(
+    state_abrv: str,
+    county_name: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> str:
+    state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
+    county_fips_to_county_name_crosswalk = load_county_fips_to_county_name_crosswalk(
+        project_root_dir=project_root_dir
+    )
+    county_fips_code = county_fips_to_county_name_crosswalk.loc[
+        (county_fips_to_county_name_crosswalk["STATEFP"] == state_fips_code)
+        & (
+            county_fips_to_county_name_crosswalk["NAME"].str.lower()
+            == county_name.lower()
+        ),
+        "COUNTYFP",
+    ].values[0]
+    return county_fips_code
+
+
+def get_county_geoid(state_abrv: str, county_name: str) -> str:
+    state_abrv = state_abrv.upper()
+    state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
+    county_fips_code = crosswalk_county_name_to_county_fips_code(
+        state_abrv=state_abrv, county_name=county_name
+    )
+    county_geoid = state_fips_code + county_fips_code
+    return county_geoid
+
+
 def extract_county_fips_to_county_name_crosswalk(
     project_root_dir: os.path = get_project_root_dir(), year: str = "2021"
 ) -> None:
@@ -105,7 +135,7 @@ def extract_county_fips_to_county_name_crosswalk(
     )
     if not os.path.isfile(file_path):
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        counties_gdf = extract_tiger_county_lines_from_one_year(
+        counties_gdf = extract_tiger_boundary_lines_for_all_counties(
             year=year, project_root_dir=project_root_dir, return_df=True
         )
         county_fips_code_crosswalk = counties_gdf[
@@ -141,27 +171,7 @@ def load_county_fips_to_county_name_crosswalk(
         return pd.read_csv(file_path, dtype="string")
 
 
-def crosswalk_county_name_to_county_fips_code(
-    state_abrv: str,
-    county_name: str,
-    project_root_dir: os.path = get_project_root_dir(),
-) -> str:
-    state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
-    county_fips_to_county_name_crosswalk = load_county_fips_to_county_name_crosswalk(
-        project_root_dir=project_root_dir
-    )
-    county_fips_code = county_fips_to_county_name_crosswalk.loc[
-        (county_fips_to_county_name_crosswalk["STATEFP"] == state_fips_code)
-        & (
-            county_fips_to_county_name_crosswalk["NAME"].str.lower()
-            == county_name.lower()
-        ),
-        "COUNTYFP",
-    ].values[0]
-    return county_fips_code
-
-
-def load_tiger_county_boundary_from_one_year_and_county(
+def load_tiger_boundary_lines_for_county(
     state_abrv: str,
     county_name: str,
     year: str,
@@ -170,7 +180,7 @@ def load_tiger_county_boundary_from_one_year_and_county(
 ) -> gpd.GeoDataFrame:
     state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
     if counties_gdf is None:
-        counties_gdf = extract_tiger_county_lines_from_one_year(
+        counties_gdf = extract_tiger_boundary_lines_for_all_counties(
             year=year, project_root_dir=project_root_dir
         )
     county_gdf = counties_gdf.loc[
@@ -197,18 +207,13 @@ def extract_tiger_rail_lines_2021(
     )
 
 
-def extract_tiger_county_roads_from_one_year(
+def extract_tiger_roads_in_county(
     state_abrv: str,
     county_name: str,
     year: str,
     project_root_dir: os.path = get_project_root_dir(),
 ) -> None:
-    state_abrv = state_abrv.upper()
-    state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
-    county_fips_code = crosswalk_county_name_to_county_fips_code(
-        state_abrv=state_abrv, county_name=county_name
-    )
-    county_geoid = state_fips_code + county_fips_code
+    county_geoid = get_county_geoid(state_abrv=state_abrv, county_name=county_name)
 
     url = f"https://www2.census.gov/geo/tiger/TIGER{year}/ROADS/tl_{year}_{county_geoid}_roads.zip"
     file_name = f"roads_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
@@ -219,16 +224,17 @@ def extract_tiger_county_roads_from_one_year(
     )
 
 
-def load_tiger_county_roads_from_one_year(
+def load_tiger_roads_in_county(
     state_abrv: str,
     county_name: str,
     year: str,
     project_root_dir: os.path = get_project_root_dir(),
 ) -> gpd.GeoDataFrame:
+    """load_tiger_county_roads_from_one_year"""
     file_name = f"roads_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
     file_path = os.path.join(project_root_dir, "data_raw", "roads", file_name)
     if not os.path.isfile(file_path):
-        extract_tiger_county_roads_from_one_year(
+        extract_tiger_roads_in_county(
             state_abrv=state_abrv,
             county_name=county_name,
             year=year,
@@ -237,10 +243,11 @@ def load_tiger_county_roads_from_one_year(
     return gpd.read_file(file_path)
 
 
-def extract_tiger_coastline_from_year(
+def extract_tiger_us_coastline(
     year: str,
     project_root_dir: os.path = get_project_root_dir(),
 ) -> gpd.GeoDataFrame:
+    """Pulls coastline data from TIGER for the entire US."""
     file_name = f"tiger_coastline_{year}.zip"
     file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
     url = f"https://www2.census.gov/geo/tiger/TIGER{year}/COASTLINE/tl_{year}_us_coastline.zip"
@@ -249,14 +256,15 @@ def extract_tiger_coastline_from_year(
     )
 
 
-def load_tiger_coastline_from_year(
+def load_tiger_us_coastline(
     year: str,
     project_root_dir: os.path = get_project_root_dir(),
 ) -> gpd.GeoDataFrame:
+    """Returns coastline data from TIGER for the entire US."""
     file_name = f"tiger_coastline_{year}.zip"
     file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
     if not os.path.isfile(file_path):
-        extract_tiger_coastline_from_year(
+        extract_tiger_us_coastline(
             year=year,
             project_root_dir=project_root_dir,
         )
@@ -272,12 +280,7 @@ def extract_tiger_county_area_hyrography_relationships_for_year(
     """TIGER description: Topological Faces Area Hydrography County Relationship
     TIGER label: 'facesah'
     """
-    state_abrv = state_abrv.upper()
-    state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
-    county_fips_code = crosswalk_county_name_to_county_fips_code(
-        state_abrv=state_abrv, county_name=county_name
-    )
-    county_geoid = state_fips_code + county_fips_code
+    county_geoid = get_county_geoid(state_abrv=state_abrv, county_name=county_name)
 
     url = f"https://www2.census.gov/geo/tiger/TIGER{year}/FACESAH/tl_{year}_{county_geoid}_facesah.zip"
     file_name = f"tiger_area_hydrography_relationships_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
@@ -306,14 +309,14 @@ def load_tiger_county_area_hyrography_relationships_for_year(
     return gpd.read_file(file_path)
 
 
-def extract_tiger_area_water_for_year_and_county(
+def extract_tiger_area_water_in_county(
     state_abrv: str,
     county_name: str,
     year: str,
     project_root_dir: os.path = get_project_root_dir(),
 ) -> None:
-    """TIGER description: Topological Faces County-based Shapefile Record Layout
-    TIGER label: 'facesah'
+    """TIGER description: Area Hydrography County-based Shapefile Record Layout
+    TIGER label: 'areawater'
     """
     county_geoid = get_county_geoid(state_abrv=state_abrv, county_name=county_name)
 
@@ -326,7 +329,7 @@ def extract_tiger_area_water_for_year_and_county(
     )
 
 
-def load_tiger_tiger_area_water_for_year_and_county(
+def load_tiger_area_water_in_county(
     state_abrv: str,
     county_name: str,
     year: str,
@@ -335,7 +338,7 @@ def load_tiger_tiger_area_water_for_year_and_county(
     file_name = f"tiger_area_water_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
     file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
     if not os.path.isfile(file_path):
-        extract_tiger_area_water_for_year_and_county(
+        extract_tiger_area_water_in_county(
             state_abrv=state_abrv,
             county_name=county_name,
             year=year,
@@ -357,12 +360,12 @@ def plot_roads_by_feature_class_in_county_in_census_year(
     top_pad_mult: float = 2.5,
 ) -> None:
     if county_roads_gdf is None:
-        county_roads_gdf = load_tiger_county_roads_from_one_year(
+        county_roads_gdf = load_tiger_roads_in_county(
             state_abrv=state_abrv,
             county_name=county_name,
             year=year,
         )
-    county_gdf = load_tiger_county_boundary_from_one_year_and_county(
+    county_gdf = load_tiger_boundary_lines_for_county(
         state_abrv=state_abrv,
         county_name=county_name,
         year=year,
