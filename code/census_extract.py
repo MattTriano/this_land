@@ -237,6 +237,32 @@ def load_tiger_county_roads_from_one_year(
     return gpd.read_file(file_path)
 
 
+def extract_tiger_coastline_from_year(
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> gpd.GeoDataFrame:
+    file_name = f"tiger_coastline_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
+    url = f"https://www2.census.gov/geo/tiger/TIGER{year}/COASTLINE/tl_{year}_us_coastline.zip"
+    extract_file_from_url(
+        file_path=file_path, url=url, data_format="shp", return_df=False
+    )
+
+
+def load_tiger_coastline_from_year(
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> gpd.GeoDataFrame:
+    file_name = f"tiger_coastline_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
+    if not os.path.isfile(file_path):
+        extract_tiger_coastline_from_year(
+            year=year,
+            project_root_dir=project_root_dir,
+        )
+    return gpd.read_file(file_path)
+
+
 def plot_roads_by_feature_class_in_county_in_census_year(
     state_abrv: str,
     county_name: str,
