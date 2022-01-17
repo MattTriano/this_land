@@ -14,81 +14,9 @@ from utils import (
 from constants import STATE_ABRV_TO_FIPS_CODE_CROSSWALK
 
 
-def extract_tiger_state_boundary_lines(
-    year: str,
-    project_root_dir: os.path = get_project_root_dir(),
-    return_df: bool = True,
-) -> gpd.GeoDataFrame:
-    data_documentation_url = (
-        "https://www.census.gov/programs-surveys/geography/technical-documentation/"
-        + f"complete-technical-documentation/tiger-geo-line.{year}.html"
-    )
-    file_name = f"census_tiger_state_lines_{year}.zip"
-    url = f"https://www2.census.gov/geo/tiger/TIGER{year}/STATE/tl_{year}_us_state.zip"
-    file_path = os.path.join(project_root_dir, "data_raw", file_name)
-
-    return extract_file_from_url(
-        file_path=file_path, url=url, data_format="shp", return_df=return_df
-    )
-
-
-def extract_tiger_boundary_lines_for_all_counties(
-    year: str,
-    project_root_dir: os.path = get_project_root_dir(),
-    return_df: bool = True,
-) -> pd.DataFrame:
-    data_documentation_url = (
-        "https://www.census.gov/programs-surveys/geography/technical-documentation/"
-        + f"complete-technical-documentation/tiger-geo-line.{year}.html"
-    )
-    file_name = f"census_tiger_county_lines_{year}.zip"
-    url = (
-        f"https://www2.census.gov/geo/tiger/TIGER{year}/COUNTY/tl_{year}_us_county.zip"
-    )
-    file_path = os.path.join(project_root_dir, "data_raw", file_name)
-
-    return extract_file_from_url(
-        file_path=file_path, url=url, data_format="shp", return_df=return_df
-    )
-
-
-def extract_tiger_census_tract_boundary_lines_for_state(
-    state_abrv: str,
-    year: str,
-    project_root_dir: os.path = get_project_root_dir(),
-    return_df: bool = True,
-) -> gpd.GeoDataFrame:
-    state_abrv = state_abrv.upper()
-    state_fips = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
-    file_name = f"census_tracts_{state_abrv}_{year}.zip"
-    url = f"https://www2.census.gov/geo/tiger/TIGER{year}/TRACT/tl_{year}_{state_fips}_tract.zip"
-    file_path = os.path.join(project_root_dir, "data_raw", file_name)
-
-    return extract_file_from_url(
-        file_path=file_path, url=url, data_format="shp", return_df=return_df
-    )
-
-
-def extract_tiger_census_tract_boundary_lines_for_a_list_of_states(
-    year: str,
-    state_abrv_list: List[str],
-    project_root_dir: os.path = get_project_root_dir(),
-    return_df: bool = True,
-) -> Optional[gpd.GeoDataFrame]:
-    tract_gdf_list = []
-    for state_abrv in state_abrv_list:
-        tract_gdf_list.append(
-            extract_tiger_census_tract_boundary_lines_for_state(
-                state_abrv=state_abrv,
-                year=year,
-                project_root_dir=project_root_dir,
-                return_df=True,
-            )
-        )
-    if return_df:
-        tract_gdf = pd.concat(tract_gdf_list)
-        tract_gdf = tract_gdf.reset_index(drop=True)
-        return tract_gdf
+########################################################################################
+################################ Census and TIGER UTILS ################################
+########################################################################################
 
 
 def crosswalk_state_abrv_to_state_fips_code(state_abrv: str) -> str:
@@ -135,7 +63,7 @@ def extract_county_fips_to_county_name_crosswalk(
     )
     if not os.path.isfile(file_path):
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        counties_gdf = extract_tiger_boundary_lines_for_all_counties(
+        counties_gdf = load_tiger_boundary_lines_for_all_counties(
             year=year, project_root_dir=project_root_dir, return_df=True
         )
         county_fips_code_crosswalk = counties_gdf[
@@ -171,6 +99,77 @@ def load_county_fips_to_county_name_crosswalk(
         return pd.read_csv(file_path, dtype="string")
 
 
+########################################################################################
+#################################### BOUNDARY LINES ####################################
+########################################################################################
+
+
+def extract_tiger_boundary_lines_for_all_states(
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+    return_df: bool = True,
+) -> gpd.GeoDataFrame:
+    data_documentation_url = (
+        "https://www.census.gov/programs-surveys/geography/technical-documentation/"
+        + f"complete-technical-documentation/tiger-geo-line.{year}.html"
+    )
+    url = f"https://www2.census.gov/geo/tiger/TIGER{year}/STATE/tl_{year}_us_state.zip"
+    file_name = f"census_tiger_state_lines_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "boundary", file_name)
+    return extract_file_from_url(
+        file_path=file_path, url=url, data_format="shp", return_df=False
+    )
+
+
+def load_tiger_boundary_lines_for_all_states(
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> gpd.GeoDataFrame:
+    """Returns TIGER boundary lines for all US states."""
+    file_name = f"census_tiger_state_lines_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "boundary", file_name)
+    if not os.path.isfile(file_path):
+        extract_tiger_boundary_lines_for_all_states(
+            year=year,
+            project_root_dir=project_root_dir,
+        )
+    return gpd.read_file(file_path)
+
+
+def extract_tiger_boundary_lines_for_all_counties(
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+    return_df: bool = True,
+) -> pd.DataFrame:
+    data_documentation_url = (
+        "https://www.census.gov/programs-surveys/geography/technical-documentation/"
+        + f"complete-technical-documentation/tiger-geo-line.{year}.html"
+    )
+    url = (
+        f"https://www2.census.gov/geo/tiger/TIGER{year}/COUNTY/tl_{year}_us_county.zip"
+    )
+    file_name = f"census_tiger_county_lines_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "boundary", file_name)
+    return extract_file_from_url(
+        file_path=file_path, url=url, data_format="shp", return_df=False
+    )
+
+
+def load_tiger_boundary_lines_for_all_counties(
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> gpd.GeoDataFrame:
+    """Returns TIGER boundary lines for all US counties."""
+    file_name = f"census_tiger_county_lines_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "boundary", file_name)
+    if not os.path.isfile(file_path):
+        extract_tiger_boundary_lines_for_all_counties(
+            year=year,
+            project_root_dir=project_root_dir,
+        )
+    return gpd.read_file(file_path)
+
+
 def load_tiger_boundary_lines_for_county(
     state_abrv: str,
     county_name: str,
@@ -180,7 +179,7 @@ def load_tiger_boundary_lines_for_county(
 ) -> gpd.GeoDataFrame:
     state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
     if counties_gdf is None:
-        counties_gdf = extract_tiger_boundary_lines_for_all_counties(
+        counties_gdf = load_tiger_boundary_lines_for_all_counties(
             year=year, project_root_dir=project_root_dir
         )
     county_gdf = counties_gdf.loc[
@@ -189,6 +188,50 @@ def load_tiger_boundary_lines_for_county(
     ].copy()
     county_gdf = county_gdf.reset_index(drop=True)
     return county_gdf
+
+
+def extract_tiger_boundary_lines_for_all_census_tracts_in_state(
+    state_abrv: str,
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+    return_df: bool = True,
+) -> gpd.GeoDataFrame:
+    state_abrv = state_abrv.upper()
+    state_fips = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
+    file_name = f"census_tracts_{state_abrv}_{year}.zip"
+    url = f"https://www2.census.gov/geo/tiger/TIGER{year}/TRACT/tl_{year}_{state_fips}_tract.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "boundary", file_name)
+
+    return extract_file_from_url(
+        file_path=file_path, url=url, data_format="shp", return_df=return_df
+    )
+
+
+def extract_tiger_census_tract_boundary_lines_for_a_list_of_states(
+    year: str,
+    state_abrv_list: List[str],
+    project_root_dir: os.path = get_project_root_dir(),
+    return_df: bool = True,
+) -> Optional[gpd.GeoDataFrame]:
+    tract_gdf_list = []
+    for state_abrv in state_abrv_list:
+        tract_gdf_list.append(
+            extract_tiger_boundary_lines_for_all_census_tracts_in_state(
+                state_abrv=state_abrv,
+                year=year,
+                project_root_dir=project_root_dir,
+                return_df=True,
+            )
+        )
+    if return_df:
+        tract_gdf = pd.concat(tract_gdf_list)
+        tract_gdf = tract_gdf.reset_index(drop=True)
+        return tract_gdf
+
+
+########################################################################################
+########################### Census and TIGER Transportation ############################
+########################################################################################
 
 
 def extract_tiger_rail_lines_2021(
@@ -241,6 +284,11 @@ def load_tiger_roads_in_county(
             project_root_dir=project_root_dir,
         )
     return gpd.read_file(file_path)
+
+
+########################################################################################
+################################## Water and Topology# #################################
+########################################################################################
 
 
 def extract_tiger_us_coastline(
@@ -345,6 +393,29 @@ def load_tiger_area_water_in_county(
             project_root_dir=project_root_dir,
         )
     return gpd.read_file(file_path)
+
+
+########################################################################################
+################################# Plotting and Mapping #################################
+########################################################################################
+
+
+def add_county_water_to_map(
+    state_abrv: str,
+    county_name: str,
+    year: str,
+    ax: plt.Axes,
+    county_areawater_gdf: Optional[gpd.GeoDataFrame] = None,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> plt.Axes:
+    if county_areawater_gdf is None:
+        county_areawater_gdf = load_tiger_area_water_in_county(
+            state_abrv=state_abrv,
+            county_name=county_name,
+            year=year,
+            project_root_dir=project_root_dir,
+        )
+    return county_areawater_gdf.plot(color="#92c5de", alpha=0.6, ax=ax)
 
 
 def plot_roads_by_feature_class_in_county_in_census_year(
