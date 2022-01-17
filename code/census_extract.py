@@ -263,6 +263,49 @@ def load_tiger_coastline_from_year(
     return gpd.read_file(file_path)
 
 
+def extract_tiger_county_area_hyrography_relationships_for_year(
+    state_abrv: str,
+    county_name: str,
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> None:
+    """TIGER description: Topological Faces Area Hydrography County Relationship
+    TIGER label: 'facesah'
+    """
+    state_abrv = state_abrv.upper()
+    state_fips_code = crosswalk_state_abrv_to_state_fips_code(state_abrv=state_abrv)
+    county_fips_code = crosswalk_county_name_to_county_fips_code(
+        state_abrv=state_abrv, county_name=county_name
+    )
+    county_geoid = state_fips_code + county_fips_code
+
+    url = f"https://www2.census.gov/geo/tiger/TIGER{year}/FACESAH/tl_{year}_{county_geoid}_facesah.zip"
+    file_name = f"tiger_area_hydrography_relationships_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
+
+    extract_file_from_url(
+        file_path=file_path, url=url, data_format="shp", return_df=False
+    )
+
+
+def load_tiger_county_area_hyrography_relationships_for_year(
+    state_abrv: str,
+    county_name: str,
+    year: str,
+    project_root_dir: os.path = get_project_root_dir(),
+) -> gpd.GeoDataFrame:
+    file_name = f"tiger_area_hydrography_relationships_in_{county_name.lower().replace(' ', '_')}_county_{state_abrv.upper()}_{year}.zip"
+    file_path = os.path.join(project_root_dir, "data_raw", "water", file_name)
+    if not os.path.isfile(file_path):
+        extract_tiger_county_area_hyrography_relationships_for_year(
+            state_abrv=state_abrv,
+            county_name=county_name,
+            year=year,
+            project_root_dir=project_root_dir,
+        )
+    return gpd.read_file(file_path)
+
+
 def plot_roads_by_feature_class_in_county_in_census_year(
     state_abrv: str,
     county_name: str,
